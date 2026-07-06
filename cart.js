@@ -259,13 +259,13 @@ const Countdown = {
             const d = this.endTime - Date.now();
             if (d <= 0) {
                 clearInterval(this.interval);
+                // Shake e poi nascondi solo il countdown, non il promo
                 cdEl.classList.add('shake');
                 setTimeout(() => {
                     cdEl.classList.remove('shake');
                     cdEl.classList.add('fall');
                     setTimeout(() => {
                         cdEl.style.display = 'none';
-                        if (promoEl) promoEl.style.display = 'none';
                     }, 1000);
                 }, 500);
                 return;
