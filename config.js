@@ -30,7 +30,7 @@ const CONFIG = {
             return this;
         } catch (e) {
             console.error('Errore caricamento config:', e);
-            this.sito = { nome: "Libri d'Impresa", email: "info@libridimpresa.it", telefono: "+39 02 1234567", citta: "Milano" };
+            this.sito = { nome: "Edizioni Aurora", email: "info@edizioniaurora.it", telefono: "+39 02 1234567", citta: "Milano" };
             this.social = { facebook: "", instagram: "", twitter: "", linkedin: "", whatsapp: "" };
             this.negozio = { spedizioneGratuitaSopra: 30, costoSpedizione: 4.90, valuta: "EUR", simboloValuta: "EUR" };
             this.prodotti = [];

@@ -36,8 +36,8 @@ const memoryStore = {
         { id: 'finanza', nome: 'Finanza per tutti', autore: 'Paolo Blu', prezzo: 21.99, prezzoVecchio: null, immagine: '', descrizione: 'Gestione finanziaria semplificata', inStock: true, checkoutUrl: '' }
     ],
     settings: {
-        siteName: "Libri d'Impresa",
-        email: 'info@libridimpresa.it',
+        siteName: "Edizioni Aurora",
+        email: 'info@edizioniaurora.it',
         phone: '+39 02 1234567',
         city: 'Milano'
     },
@@ -965,7 +965,7 @@ initDatabase().then(() => {
     app.listen(PORT, () => {
         console.log(`
 ========================================
-  Libri d'Impresa Server
+  Edizioni Aurora Server
   http://localhost:${PORT}
   Database: ${isConnected() ? 'PostgreSQL' : 'Memoria locale'}
 ========================================

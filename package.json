@@ -1,7 +1,7 @@
 {
-  "name": "libri-dimpresa",
+  "name": "edizioni-aurora",
   "version": "1.0.0",
-  "description": "Sito e-commerce per Libri d'Impresa",
+  "description": "Sito e-commerce per Edizioni Aurora",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

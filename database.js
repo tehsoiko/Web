@@ -150,8 +150,8 @@ async function initDatabase() {
         const settingsCheck = await query('SELECT COUNT(*) FROM settings');
         if (parseInt(settingsCheck.rows[0].count) === 0) {
             const settings = [
-                ['site_name', 'Libri d\'Impresa'],
-                ['email', 'info@libridimpresa.it'],
+                ['site_name', 'Edizioni Aurora'],
+                ['email', 'info@edizioniaurora.it'],
                 ['phone', '+39 02 1234567'],
                 ['city', 'Milano'],
                 ['free_shipping_above', '30'],
