@@ -12,6 +12,14 @@ const Cart = {
     save() {
         localStorage.setItem('cart', JSON.stringify(this.items));
         this.updateUI();
+        this.refresh();
+    },
+    
+    refresh() {
+        const container = document.getElementById('cartContainer');
+        if (container) {
+            this.render(container);
+        }
     },
     
     add(productId, qty = 1) {
