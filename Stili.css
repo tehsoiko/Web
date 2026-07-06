@@ -25,14 +25,14 @@
 }
 
 [data-theme="fuoco"] {
-    --primary: #ff7f4d;
-    --primary-dark: #e65c2c;
-    --bg: #fff8f4;
-    --card: #fff2ed;
-    --text: #2a1a12;
-    --muted: #7a5c4a;
-    --success: #f59e42;
-    --danger: #ef4444;
+    --primary: #e85d3b;
+    --primary-dark: #c44a2d;
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --text: #d4d4d4;
+    --muted: #8a8a8a;
+    --success: #5cb85c;
+    --danger: #d9534f;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
