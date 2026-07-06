@@ -1,8 +1,7 @@
-// CONFIGURAZIONE SITO - Caricata dinamicamente dal server
-
 const CONFIG = {
     _loaded: false,
     _listeners: [],
+    csrfToken: null,
     
     onReady(callback) {
         if (this._loaded) callback();
@@ -11,13 +10,16 @@ const CONFIG = {
     
     async load() {
         try {
+            const csrfRes = await fetch('/api/csrf-token');
+            const csrfData = await csrfRes.json();
+            this.csrfToken = csrfData.token;
+            
             const res = await fetch('/api/settings');
             const data = await res.json();
             
             this.sito = data.sito;
             this.social = data.social;
             this.negozio = data.negozio;
-            this.prodotti = [];
             
             const productsRes = await fetch('/api/products');
             this.prodotti = await productsRes.json();
@@ -28,12 +30,7 @@ const CONFIG = {
             return this;
         } catch (e) {
             console.error('Errore caricamento config:', e);
-            this.sito = {
-                nome: "Libri d'Impresa",
-                email: "info@libridimpresa.it",
-                telefono: "+39 02 1234567",
-                citta: "Milano"
-            };
+            this.sito = { nome: "Libri d'Impresa", email: "info@libridimpresa.it", telefono: "+39 02 1234567", citta: "Milano" };
             this.social = { facebook: "", instagram: "", twitter: "", linkedin: "", whatsapp: "" };
             this.negozio = { spedizioneGratuitaSopra: 30, costoSpedizione: 4.90, valuta: "EUR", simboloValuta: "EUR" };
             this.prodotti = [];
@@ -60,7 +57,7 @@ const API = {
     },
     
     async getProduct(id) {
-        const res = await fetch(`/api/products/${id}`);
+        const res = await fetch(`/api/products/${encodeURIComponent(id)}`);
         return res.json();
     },
     
@@ -68,7 +65,7 @@ const API = {
         const res = await fetch('/api/contact', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ ...data, csrf_token: CONFIG.csrfToken })
         });
         return res.json();
     },
@@ -77,7 +74,7 @@ const API = {
         const res = await fetch('/api/newsletter', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email, csrf_token: CONFIG.csrfToken })
         });
         return res.json();
     }

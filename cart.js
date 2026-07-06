@@ -1,11 +1,26 @@
-// CARRELLO E-COMMERCE
-
 const Cart = {
     items: [],
     
     init() {
-        const saved = localStorage.getItem('cart');
-        if (saved) this.items = JSON.parse(saved);
+        try {
+            const saved = localStorage.getItem('cart');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    this.items = parsed.filter(item => 
+                        item && 
+                        typeof item.id === 'string' && 
+                        /^[a-zA-Z0-9_-]{1,100}$/.test(item.id) &&
+                        typeof item.prezzo === 'number' &&
+                        item.prezzo >= 0 &&
+                        typeof item.qty === 'number' &&
+                        item.qty > 0
+                    );
+                }
+            }
+        } catch (e) {
+            this.items = [];
+        }
         this.updateUI();
     },
     
@@ -22,13 +37,23 @@ const Cart = {
         }
     },
     
+    escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    },
+    
     add(productId, qty = 1) {
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(productId)) return;
+        if (typeof qty !== 'number' || qty < 1 || qty > 99) qty = 1;
+        
         const prodotto = CONFIG.prodotti.find(p => p.id === productId);
         if (!prodotto) return;
         
         const existing = this.items.find(i => i.id === productId);
         if (existing) {
-            existing.qty += qty;
+            existing.qty = Math.min(existing.qty + qty, 99);
         } else {
             this.items.push({
                 id: productId,
@@ -39,20 +64,26 @@ const Cart = {
             });
         }
         this.save();
-        this.showNotification(`${prodotto.nome} aggiunto al carrello`);
+        this.showNotification(`${this.escapeHtml(prodotto.nome)} aggiunto al carrello`);
     },
     
     remove(productId) {
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(productId)) return;
         this.items = this.items.filter(i => i.id !== productId);
         this.save();
     },
     
     updateQty(productId, qty) {
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(productId)) return;
+        if (typeof qty !== 'number' || qty < 0) qty = 0;
+        
         const item = this.items.find(i => i.id === productId);
         if (item) {
-            if (qty <= 0) this.remove(productId);
-            else item.qty = qty;
-            this.save();
+            if (qty <= 0 || qty > 99) this.remove(productId);
+            else {
+                item.qty = qty;
+                this.save();
+            }
         }
     },
     
@@ -125,25 +156,28 @@ const Cart = {
         
         let html = '<div class="cart-items">';
         this.items.forEach(item => {
+            const safeName = this.escapeHtml(item.nome);
+            const safeId = this.escapeHtml(item.id);
+            
             html += `
                 <div class="cart-item">
                     <div class="cart-item-img">
                         ${item.immagine 
-                            ? `<img src="${item.immagine}" alt="${item.nome}" loading="lazy">`
+                            ? `<img src="${this.escapeHtml(item.immagine)}" alt="${safeName}" loading="lazy">`
                             : `<div class="cart-item-placeholder"><svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" fill="none" stroke-width="1.5" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>`
                         }
                     </div>
                     <div class="cart-item-info">
-                        <h4>${item.nome}</h4>
+                        <h4>${safeName}</h4>
                         <p class="cart-item-price">${this.formatPrice(item.prezzo)}</p>
                     </div>
                     <div class="cart-item-qty">
-                        <button onclick="Cart.updateQty('${item.id}', ${item.qty - 1})" aria-label="Riduci quantita">-</button>
+                        <button onclick="Cart.updateQty('${safeId}', ${item.qty - 1})" aria-label="Riduci quantita">-</button>
                         <span>${item.qty}</span>
-                        <button onclick="Cart.updateQty('${item.id}', ${item.qty + 1})" aria-label="Aumenta quantita">+</button>
+                        <button onclick="Cart.updateQty('${safeId}', ${item.qty + 1})" aria-label="Aumenta quantita">+</button>
                     </div>
                     <div class="cart-item-total">${this.formatPrice(item.prezzo * item.qty)}</div>
-                    <button class="cart-item-remove" onclick="Cart.remove('${item.id}')" aria-label="Rimuovi dal carrello">
+                    <button class="cart-item-remove" onclick="Cart.remove('${safeId}')" aria-label="Rimuovi dal carrello">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
@@ -178,6 +212,8 @@ const Cart = {
     },
     
     checkout() {
+        if (this.items.length === 0) return;
+        
         const hasAllLinks = this.items.every(item => {
             const prodotto = CONFIG.prodotti.find(p => p.id === item.id);
             return prodotto && prodotto.checkoutUrl;
@@ -203,14 +239,11 @@ const Cart = {
     }
 };
 
-// Contatore visite dal server
 const VisitCounter = {
     interval: null,
     
     async init() {
         await this.update();
-        
-        // Aggiorna ogni 30 secondi per mantenere la sessione attiva
         this.interval = setInterval(() => this.update(), 30000);
     },
     
@@ -232,7 +265,6 @@ const VisitCounter = {
     }
 };
 
-// Countdown gestito dal server
 const Countdown = {
     endTime: null,
     interval: null,
@@ -243,7 +275,6 @@ const Countdown = {
             this.endTime = data.endTime;
             this.start();
         } catch (e) {
-            console.log('Countdown: uso fallback locale');
             const saved = localStorage.getItem('cdEnd_v3');
             if (!saved || parseInt(saved) < Date.now()) {
                 this.endTime = Date.now() + 10 * 60 * 1000;
@@ -259,15 +290,12 @@ const Countdown = {
         if (this.interval) clearInterval(this.interval);
         
         const cdEl = document.getElementById('countdown');
-        const promoEl = document.getElementById('promo');
-        
         if (!cdEl) return;
         
         const update = () => {
             const d = this.endTime - Date.now();
             if (d <= 0) {
                 clearInterval(this.interval);
-                // Shake e poi nascondi solo il countdown, non il promo
                 cdEl.classList.add('shake');
                 setTimeout(() => {
                     cdEl.classList.remove('shake');
@@ -295,7 +323,6 @@ const Countdown = {
     }
 };
 
-// Inizializza
 document.addEventListener('DOMContentLoaded', async () => {
     await CONFIG.load();
     Cart.init();
@@ -303,8 +330,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     Countdown.init();
 });
 
-// Catalogo (per pagina catalogo.html)
 const Catalog = {
+    escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    },
+    
     async init() {
         const grid = document.getElementById('catalogGrid');
         if (!grid) return;
@@ -318,19 +351,25 @@ const Catalog = {
             return;
         }
         
-        grid.innerHTML = CONFIG.prodotti.map(p => `
-            <div class="book">
-                ${p.immagine 
-                    ? `<img src="${p.immagine}" alt="${p.nome}" class="book-cover" loading="lazy">`
-                    : `<div class="book-cover" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--primary),var(--primary-dark));"><svg viewBox="0 0 24 24" width="60" height="60" stroke="#fff" fill="none" stroke-width="1.5" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>`
-                }
-                <div class="book-body">
-                    <h3 class="book-title">${p.nome}</h3>
-                    <p class="book-author">${p.autore || p.descrizione}</p>
-                    <p class="book-price">EUR ${p.prezzo.toFixed(2).replace('.',',')}</p>
-                    <button class="btn btn-add" style="font-size:0.85em;padding:10px 20px;width:100%;" onclick="Cart.add('${p.id}')">Aggiungi al carrello</button>
+        grid.innerHTML = CONFIG.prodotti.map(p => {
+            const safeName = this.escapeHtml(p.nome);
+            const safeAuthor = this.escapeHtml(p.autore || p.descrizione || '');
+            const safeId = this.escapeHtml(p.id);
+            
+            return `
+                <div class="book">
+                    ${p.immagine 
+                        ? `<img src="${this.escapeHtml(p.immagine)}" alt="${safeName}" class="book-cover" loading="lazy">`
+                        : `<div class="book-cover" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--primary),var(--primary-dark));"><svg viewBox="0 0 24 24" width="60" height="60" stroke="#fff" fill="none" stroke-width="1.5" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>`
+                    }
+                    <div class="book-body">
+                        <h3 class="book-title">${safeName}</h3>
+                        <p class="book-author">${safeAuthor}</p>
+                        <p class="book-price">EUR ${p.prezzo.toFixed(2).replace('.',',')}</p>
+                        <button class="btn btn-add" style="font-size:0.85em;padding:10px 20px;width:100%;" onclick="Cart.add('${safeId}')">Aggiungi al carrello</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 };

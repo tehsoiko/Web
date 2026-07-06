@@ -12,7 +12,10 @@ async function initPool() {
     try {
         pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+            max: 10,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 5000
         });
         
         await pool.query('SELECT NOW()');
@@ -28,7 +31,19 @@ async function query(text, params) {
     if (!pool) {
         throw new Error('Database non connesso');
     }
-    return pool.query(text, params);
+    
+    const start = Date.now();
+    try {
+        const result = await pool.query(text, params);
+        const duration = Date.now() - start;
+        if (duration > 1000) {
+            console.warn(`Query lenta (${duration}ms): ${text.substring(0, 50)}...`);
+        }
+        return result;
+    } catch (err) {
+        console.error('Query error:', err.message);
+        throw err;
+    }
 }
 
 async function initDatabase() {
@@ -43,15 +58,19 @@ async function initDatabase() {
         await query(`
             CREATE TABLE IF NOT EXISTS views (
                 id SERIAL PRIMARY KEY,
-                session_id VARCHAR(255) NOT NULL,
+                session_id VARCHAR(36) NOT NULL,
                 view_date DATE NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
         
         await query(`
+            CREATE INDEX IF NOT EXISTS idx_views_session_date ON views(session_id, view_date)
+        `);
+        
+        await query(`
             CREATE TABLE IF NOT EXISTS active_sessions (
-                session_id VARCHAR(255) PRIMARY KEY,
+                session_id VARCHAR(36) PRIMARY KEY,
                 last_activity TIMESTAMP DEFAULT NOW()
             )
         `);
@@ -104,9 +123,9 @@ async function initDatabase() {
         await query(`
             CREATE TABLE IF NOT EXISTS contacts (
                 id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
+                name VARCHAR(100) NOT NULL,
                 email VARCHAR(255) NOT NULL,
-                subject VARCHAR(255),
+                subject VARCHAR(200),
                 message TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW(),
                 is_read BOOLEAN DEFAULT false
@@ -161,4 +180,10 @@ function isConnected() {
     return dbConnected;
 }
 
-module.exports = { query, initDatabase, isConnected };
+async function closePool() {
+    if (pool) {
+        await pool.end();
+    }
+}
+
+module.exports = { query, initDatabase, isConnected, closePool };

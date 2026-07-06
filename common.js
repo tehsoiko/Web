@@ -1,18 +1,26 @@
-// FUNZIONI CONDIVISE
-
 const Theme = {
+    allowedThemes: ['normale', 'alba', 'fuoco'],
+    
     init() {
-        const saved = localStorage.getItem('theme') || 'normale';
+        let saved = localStorage.getItem('theme') || 'normale';
+        
+        if (!this.allowedThemes.includes(saved)) {
+            saved = 'normale';
+        }
+        
         document.documentElement.setAttribute('data-theme', saved);
         
         document.querySelectorAll('.theme-btn').forEach(btn => {
-            if (btn.dataset.theme === saved) btn.classList.add('active');
+            const theme = btn.dataset.theme;
+            if (!this.allowedThemes.includes(theme)) return;
+            
+            if (theme === saved) btn.classList.add('active');
             
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                document.documentElement.setAttribute('data-theme', btn.dataset.theme);
-                localStorage.setItem('theme', btn.dataset.theme);
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
             });
         });
     }
@@ -30,7 +38,9 @@ const ScrollEffects = {
             const y = window.scrollY;
             const max = document.body.scrollHeight - window.innerHeight;
             
-            if (prog) prog.style.width = `${(y/max)*100}%`;
+            if (prog && max > 0) {
+                prog.style.width = `${Math.min(100, Math.max(0, (y/max)*100))}%`;
+            }
             if (toTop) toTop.classList.toggle('show', y > 300);
             if (nav) nav.classList.toggle('scrolled', y > 50);
         });
@@ -62,33 +72,56 @@ const FAQ = {
 };
 
 const SocialLinks = {
+    allowedNetworks: ['facebook', 'instagram', 'twitter', 'linkedin', 'whatsapp'],
+    
     init() {
         document.querySelectorAll('[data-social]').forEach(el => {
             const key = el.dataset.social;
+            
+            if (!this.allowedNetworks.includes(key)) return;
+            
             if (CONFIG.social && CONFIG.social[key]) {
-                el.href = key === 'whatsapp' 
-                    ? `https://wa.me/${CONFIG.social.whatsapp}` 
+                const url = key === 'whatsapp' 
+                    ? `https://wa.me/${encodeURIComponent(CONFIG.social.whatsapp)}` 
                     : CONFIG.social[key];
+                
+                try {
+                    new URL(url);
+                    el.href = url;
+                } catch (e) {
+                    el.href = '#';
+                }
             }
         });
     }
 };
 
 const ContactInfo = {
+    escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    },
+    
     init() {
         if (!CONFIG.sito) return;
         
-        const emailEl = document.getElementById('contactEmail');
-        const phoneEl = document.getElementById('contactPhone');
-        const cityEl = document.getElementById('contactCity');
-        const cEmailEl = document.getElementById('cEmail');
-        const cPhoneEl = document.getElementById('cPhone');
+        const setEmail = (el, value) => {
+            if (el && typeof value === 'string') {
+                el.textContent = this.escapeHtml(value);
+            }
+        };
         
-        if (emailEl) emailEl.textContent = CONFIG.sito.email;
-        if (phoneEl) phoneEl.textContent = CONFIG.sito.telefono;
-        if (cityEl) cityEl.textContent = CONFIG.sito.citta;
-        if (cEmailEl) cEmailEl.innerHTML = CONFIG.sito.email + '<br>supporto@libridimpresa.it';
-        if (cPhoneEl) cPhoneEl.textContent = CONFIG.sito.telefono;
+        setEmail(document.getElementById('contactEmail'), CONFIG.sito.email);
+        setEmail(document.getElementById('contactPhone'), CONFIG.sito.telefono);
+        setEmail(document.getElementById('contactCity'), CONFIG.sito.citta);
+        
+        const cEmailEl = document.getElementById('cEmail');
+        if (cEmailEl && CONFIG.sito.email) {
+            cEmailEl.innerHTML = this.escapeHtml(CONFIG.sito.email) + '<br>supporto@libridimpresa.it';
+        }
+        setEmail(document.getElementById('cPhone'), CONFIG.sito.telefono);
     }
 };
 
@@ -101,18 +134,10 @@ async function initPage() {
     SocialLinks.init();
     ContactInfo.init();
     
-    if (typeof Cart !== 'undefined') {
-        Cart.init();
-    }
-    if (typeof VisitCounter !== 'undefined') {
-        VisitCounter.init();
-    }
-    if (typeof Countdown !== 'undefined') {
-        Countdown.init();
-    }
-    if (typeof Catalog !== 'undefined') {
-        Catalog.init();
-    }
+    if (typeof Cart !== 'undefined') Cart.init();
+    if (typeof VisitCounter !== 'undefined') VisitCounter.init();
+    if (typeof Countdown !== 'undefined') Countdown.init();
+    if (typeof Catalog !== 'undefined') Catalog.init();
 }
 
 document.addEventListener('DOMContentLoaded', initPage);
