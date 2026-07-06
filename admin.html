@@ -27,6 +27,8 @@
         .contact-item .contact-email { font-size: 0.85em; color: var(--muted); }
         .contact-item .contact-message { margin-top: 8px; color: var(--text); }
         .btn-small { padding: 8px 16px; font-size: 0.85em; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c82333; }
         .product-list { display: grid; gap: 12px; }
         .product-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(0,0,0,0.02); border-radius: 8px; }
         .product-item .product-info { display: flex; align-items: center; gap: 16px; }
@@ -34,6 +36,20 @@
         .product-item .product-name { font-weight: 600; }
         .product-item .product-price { color: var(--success); font-weight: 600; }
         .hidden { display: none; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; border: 2px solid var(--primary); border-radius: 8px; cursor: pointer; background: transparent; font-weight: 600; }
+        .tab.active { background: var(--primary); color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; }
+        .newsletter-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: rgba(0,0,0,0.02); border-radius: 8px; margin-bottom: 8px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: var(--radius); max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-content h3 { margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -54,7 +70,7 @@
     <div class="admin-container">
         <div class="login-form" id="loginForm">
             <h2 style="margin-bottom:20px;text-align:center;">Accesso Admin</h2>
-            <input type="password" id="adminToken" placeholder="Inserisci il token admin">
+            <input type="password" id="adminToken" placeholder="Inserisci il token admin" autocomplete="off">
             <button class="btn" onclick="login()">Accedi</button>
             <p style="margin-top:15px;font-size:0.85em;color:var(--muted);text-align:center;">Il token si trova nei log del server</p>
         </div>
@@ -84,29 +100,160 @@
                 </div>
             </div>
 
-            <div class="admin-section">
-                <h2>Prodotti</h2>
-                <div class="product-list" id="productList"></div>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('prodotti')">Prodotti</button>
+                <button class="tab" onclick="showTab('messaggi')">Messaggi</button>
+                <button class="tab" onclick="showTab('newsletter')">Newsletter</button>
+                <button class="tab" onclick="showTab('impostazioni')">Impostazioni</button>
+                <button class="tab" onclick="showTab('azioni')">Azioni</button>
             </div>
 
-            <div class="admin-section">
-                <h2>Messaggi ricevuti</h2>
-                <div id="contactList"></div>
-            </div>
-
-            <div class="admin-section">
-                <h2>Azioni</h2>
-                <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                    <button class="btn" onclick="resetCountdown()">Reset countdown</button>
-                    <button class="btn btn-outline" onclick="exportData()">Esporta dati</button>
-                    <button class="btn btn-outline" onclick="logout()">Esci</button>
+            <div id="tab-prodotti" class="tab-content active">
+                <div class="admin-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="margin:0;">Prodotti</h2>
+                        <button class="btn btn-small" onclick="showProductModal()">+ Nuovo prodotto</button>
+                    </div>
+                    <div class="product-list" id="productList"></div>
                 </div>
+            </div>
+
+            <div id="tab-messaggi" class="tab-content">
+                <div class="admin-section">
+                    <h2>Messaggi ricevuti</h2>
+                    <div id="contactList"></div>
+                </div>
+            </div>
+
+            <div id="tab-newsletter" class="tab-content">
+                <div class="admin-section">
+                    <h2>Iscritti Newsletter</h2>
+                    <div id="newsletterList"></div>
+                </div>
+            </div>
+
+            <div id="tab-impostazioni" class="tab-content">
+                <div class="admin-section">
+                    <h2>Impostazioni Sito</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nome sito</label>
+                            <input type="text" id="settingSiteName">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="settingEmail">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefono</label>
+                            <input type="text" id="settingPhone">
+                        </div>
+                        <div class="form-group">
+                            <label>Citta</label>
+                            <input type="text" id="settingCity">
+                        </div>
+                        <div class="form-group">
+                            <label>Spedizione gratuita sopra (EUR)</label>
+                            <input type="number" id="settingFreeShipping" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Costo spedizione (EUR)</label>
+                            <input type="number" id="settingShippingCost" step="0.01">
+                        </div>
+                    </div>
+                    <h3 style="margin:20px 0 16px;">Social</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Facebook URL</label>
+                            <input type="url" id="settingFacebook">
+                        </div>
+                        <div class="form-group">
+                            <label>Instagram URL</label>
+                            <input type="url" id="settingInstagram">
+                        </div>
+                        <div class="form-group">
+                            <label>Twitter URL</label>
+                            <input type="url" id="settingTwitter">
+                        </div>
+                        <div class="form-group">
+                            <label>LinkedIn URL</label>
+                            <input type="url" id="settingLinkedin">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp numero</label>
+                            <input type="text" id="settingWhatsapp" placeholder="es: 393331234567">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="saveSettings()">Salva impostazioni</button>
+                </div>
+            </div>
+
+            <div id="tab-azioni" class="tab-content">
+                <div class="admin-section">
+                    <h2>Azioni</h2>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <button class="btn" onclick="resetCountdown()">Reset countdown</button>
+                        <button class="btn btn-outline" onclick="exportData()">Esporta dati</button>
+                        <button class="btn btn-danger" onclick="logout()">Esci</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="productModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="productModalTitle">Nuovo prodotto</h3>
+            <input type="hidden" id="editProductId">
+            <div class="form-group">
+                <label>ID (unico, senza spazi)</label>
+                <input type="text" id="product_id" placeholder="es: mio-libro">
+            </div>
+            <div class="form-group">
+                <label>Nome *</label>
+                <input type="text" id="product_nome">
+            </div>
+            <div class="form-group">
+                <label>Autore</label>
+                <input type="text" id="product_autore">
+            </div>
+            <div class="form-group">
+                <label>Prezzo (EUR) *</label>
+                <input type="number" id="product_prezzo" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+                <label>Prezzo vecchio (EUR)</label>
+                <input type="number" id="product_prezzoVecchio" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+                <label>URL immagine</label>
+                <input type="text" id="product_immagine">
+            </div>
+            <div class="form-group">
+                <label>Descrizione</label>
+                <textarea id="product_descrizione" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>URL checkout (Stripe/PayPal)</label>
+                <input type="url" id="product_checkoutUrl">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="saveProduct()">Salva</button>
+                <button class="btn btn-outline" onclick="closeProductModal()">Annulla</button>
             </div>
         </div>
     </div>
 
     <script>
         let adminToken = '';
+        let products = [];
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
 
         function login() {
             adminToken = document.getElementById('adminToken').value.trim();
@@ -121,6 +268,8 @@
             loadStats();
             loadProducts();
             loadContacts();
+            loadNewsletter();
+            loadSettings();
         }
 
         function logout() {
@@ -129,62 +278,72 @@
             document.getElementById('adminPanel').classList.add('hidden');
         }
 
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
+            document.getElementById(`tab-${name}`).classList.add('active');
+        }
+
+        async function api(endpoint, options = {}) {
+            const res = await fetch(endpoint, {
+                ...options,
+                headers: { 'X-Admin-Token': adminToken, ...options.headers }
+            });
+            
+            if (res.status === 401) {
+                alert('Token non valido');
+                logout();
+                throw new Error('Unauthorized');
+            }
+            
+            return res;
+        }
+
         async function loadStats() {
             try {
-                const res = await fetch('/api/admin/stats', {
-                    headers: { 'X-Admin-Token': adminToken }
-                });
-                
-                if (res.status === 401) {
-                    alert('Token non valido');
-                    logout();
-                    return;
-                }
-                
+                const res = await api('/api/admin/stats');
                 const data = await res.json();
                 document.getElementById('statViews').textContent = data.views.toLocaleString('it-IT');
                 document.getElementById('statContacts').textContent = data.contacts;
                 document.getElementById('statUnread').textContent = data.unreadContacts;
                 document.getElementById('statNewsletter').textContent = data.newsletterSubscribers;
-            } catch (e) {
-                console.error('Errore caricamento statistiche:', e);
-            }
+            } catch (e) {}
         }
 
         async function loadProducts() {
             try {
                 const res = await fetch('/api/products');
-                const products = await res.json();
+                products = await res.json();
                 const list = document.getElementById('productList');
+                
+                if (products.length === 0) {
+                    list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">Nessun prodotto</p>';
+                    return;
+                }
+                
                 list.innerHTML = products.map(p => `
                     <div class="product-item">
                         <div class="product-info">
                             ${p.immagine ? `<img src="${escapeHtml(p.immagine)}" alt="${escapeHtml(p.nome)}">` : '<div style="width:50px;height:65px;background:var(--primary);border-radius:4px;"></div>'}
                             <div>
                                 <div class="product-name">${escapeHtml(p.nome)}</div>
-                                <div style="font-size:0.85em;color:var(--muted)">${escapeHtml(p.autore || p.descrizione)}</div>
+                                <div style="font-size:0.85em;color:var(--muted)">${escapeHtml(p.autore || p.descrizione || '')}</div>
                             </div>
                         </div>
-                        <div class="product-price">EUR ${p.prezzo.toFixed(2).replace('.',',')}</div>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div class="product-price">EUR ${p.prezzo.toFixed(2).replace('.',',')}</div>
+                            <button class="btn-small btn btn-outline" onclick="editProduct('${escapeHtml(p.id)}')">Modifica</button>
+                            <button class="btn-small btn btn-danger" onclick="deleteProduct('${escapeHtml(p.id)}')">Elimina</button>
+                        </div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.error('Errore caricamento prodotti:', e);
-            }
+            } catch (e) {}
         }
 
         async function loadContacts() {
             try {
-                const res = await fetch('/api/admin/contacts', {
-                    headers: { 'X-Admin-Token': adminToken }
-                });
-                
-                if (res.status === 401) {
-                    alert('Token non valido');
-                    logout();
-                    return;
-                }
-                
+                const res = await api('/api/admin/contacts');
                 const contacts = await res.json();
                 const list = document.getElementById('contactList');
                 
@@ -206,62 +365,211 @@
                         <div class="contact-message">${escapeHtml(c.message)}</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.error('Errore caricamento contatti:', e);
+            } catch (e) {}
+        }
+
+        async function loadNewsletter() {
+            try {
+                const res = await api('/api/admin/newsletter');
+                const subscribers = await res.json();
+                const list = document.getElementById('newsletterList');
+                
+                if (subscribers.length === 0) {
+                    list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">Nessun iscritto</p>';
+                    return;
+                }
+                
+                list.innerHTML = subscribers.map(n => `
+                    <div class="newsletter-item">
+                        <span>${escapeHtml(n.email)}</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span style="font-size:0.85em;color:var(--muted)">${n.date ? new Date(n.date).toLocaleDateString('it-IT') : ''}</span>
+                            <button class="btn-small btn btn-danger" onclick="removeSubscriber(${n.id})">Rimuovi</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        async function loadSettings() {
+            try {
+                const res = await api('/api/admin/settings');
+                const settings = await res.json();
+                
+                document.getElementById('settingSiteName').value = settings.site_name || '';
+                document.getElementById('settingEmail').value = settings.email || '';
+                document.getElementById('settingPhone').value = settings.phone || '';
+                document.getElementById('settingCity').value = settings.city || '';
+                document.getElementById('settingFreeShipping').value = settings.free_shipping_above || 30;
+                document.getElementById('settingShippingCost').value = settings.shipping_cost || 4.90;
+                document.getElementById('settingFacebook').value = settings.social_facebook || '';
+                document.getElementById('settingInstagram').value = settings.social_instagram || '';
+                document.getElementById('settingTwitter').value = settings.social_twitter || '';
+                document.getElementById('settingLinkedin').value = settings.social_linkedin || '';
+                document.getElementById('settingWhatsapp').value = settings.social_whatsapp || '';
+            } catch (e) {}
+        }
+
+        async function saveSettings() {
+            try {
+                const res = await api('/api/admin/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        site_name: document.getElementById('settingSiteName').value,
+                        email: document.getElementById('settingEmail').value,
+                        phone: document.getElementById('settingPhone').value,
+                        city: document.getElementById('settingCity').value,
+                        free_shipping_above: parseFloat(document.getElementById('settingFreeShipping').value) || 30,
+                        shipping_cost: parseFloat(document.getElementById('settingShippingCost').value) || 4.90,
+                        social_facebook: document.getElementById('settingFacebook').value,
+                        social_instagram: document.getElementById('settingInstagram').value,
+                        social_twitter: document.getElementById('settingTwitter').value,
+                        social_linkedin: document.getElementById('settingLinkedin').value,
+                        social_whatsapp: document.getElementById('settingWhatsapp').value
+                    })
+                });
+                
+                const data = await res.json();
+                if (data.success) alert('Impostazioni salvate!');
+            } catch (e) {}
+        }
+
+        function showProductModal(productId = null) {
+            document.getElementById('editProductId').value = productId || '';
+            document.getElementById('product_id').value = '';
+            document.getElementById('product_nome').value = '';
+            document.getElementById('product_autore').value = '';
+            document.getElementById('product_prezzo').value = '';
+            document.getElementById('product_prezzoVecchio').value = '';
+            document.getElementById('product_immagine').value = '';
+            document.getElementById('product_descrizione').value = '';
+            document.getElementById('product_checkoutUrl').value = '';
+            document.getElementById('product_id').disabled = false;
+            document.getElementById('productModalTitle').textContent = 'Nuovo prodotto';
+            
+            if (productId) {
+                const p = products.find(x => x.id === productId);
+                if (p) {
+                    document.getElementById('productModalTitle').textContent = 'Modifica prodotto';
+                    document.getElementById('product_id').value = p.id;
+                    document.getElementById('product_id').disabled = true;
+                    document.getElementById('product_nome').value = p.nome || '';
+                    document.getElementById('product_autore').value = p.autore || '';
+                    document.getElementById('product_prezzo').value = p.prezzo || '';
+                    document.getElementById('product_prezzoVecchio').value = p.prezzoVecchio || '';
+                    document.getElementById('product_immagine').value = p.immagine || '';
+                    document.getElementById('product_descrizione').value = p.descrizione || '';
+                    document.getElementById('product_checkoutUrl').value = p.checkoutUrl || '';
+                }
             }
+            
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        async function saveProduct() {
+            const editId = document.getElementById('editProductId').value;
+            const id = document.getElementById('product_id').value.trim();
+            const nome = document.getElementById('product_nome').value.trim();
+            const prezzo = parseFloat(document.getElementById('product_prezzo').value);
+            
+            if (!editId && !id) return alert('ID obbligatorio');
+            if (!nome) return alert('Nome obbligatorio');
+            if (isNaN(prezzo) || prezzo < 0) return alert('Prezzo non valido');
+            
+            const data = {
+                id,
+                nome,
+                autore: document.getElementById('product_autore').value.trim(),
+                prezzo,
+                prezzoVecchio: parseFloat(document.getElementById('product_prezzoVecchio').value) || null,
+                immagine: document.getElementById('product_immagine').value.trim(),
+                descrizione: document.getElementById('product_descrizione').value.trim(),
+                checkoutUrl: document.getElementById('product_checkoutUrl').value.trim()
+            };
+            
+            try {
+                const res = await api(editId ? `/api/admin/products/${editId}` : '/api/admin/products', {
+                    method: editId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    closeProductModal();
+                    loadProducts();
+                    alert('Prodotto salvato!');
+                } else {
+                    alert(result.error || 'Errore');
+                }
+            } catch (e) {}
+        }
+
+        function editProduct(id) {
+            showProductModal(id);
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Eliminare questo prodotto?')) return;
+            
+            try {
+                const res = await api(`/api/admin/products/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) loadProducts();
+            } catch (e) {}
+        }
+
+        async function removeSubscriber(id) {
+            if (!confirm('Rimuovere questo iscritto?')) return;
+            
+            try {
+                const res = await api(`/api/admin/newsletter/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadNewsletter();
+                    loadStats();
+                }
+            } catch (e) {}
         }
 
         async function resetCountdown() {
             try {
-                const res = await fetch('/api/admin/countdown/reset', {
-                    method: 'POST',
-                    headers: { 'X-Admin-Token': adminToken }
-                });
-                
-                if (res.status === 401) {
-                    alert('Token non valido');
-                    logout();
-                    return;
-                }
-                
+                const res = await api('/api/admin/countdown/reset', { method: 'POST' });
                 const data = await res.json();
-                if (data.success) {
-                    alert('Countdown resettato!');
-                }
-            } catch (e) {
-                console.error('Errore reset countdown:', e);
-            }
+                if (data.success) alert('Countdown resettato!');
+            } catch (e) {}
         }
 
         async function exportData() {
             try {
-                const [products, contacts, stats] = await Promise.all([
+                const [productsData, contacts, newsletter, stats] = await Promise.all([
                     fetch('/api/products').then(r => r.json()),
-                    fetch('/api/admin/contacts', { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json()),
-                    fetch('/api/admin/stats', { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json())
+                    api('/api/admin/contacts').then(r => r.json()),
+                    api('/api/admin/newsletter').then(r => r.json()),
+                    api('/api/admin/stats').then(r => r.json())
                 ]);
                 
-                const data = { products, contacts, stats, exportDate: new Date().toISOString() };
+                const data = { products: productsData, contacts, newsletter, stats, exportDate: new Date().toISOString() };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `libri-dimpresa-export-${new Date().toISOString().split('T')[0]}.json`;
                 a.click();
-            } catch (e) {
-                console.error('Errore esportazione:', e);
-            }
-        }
-
-        function escapeHtml(str) {
-            if (typeof str !== 'string') return '';
-            return str.replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
+            } catch (e) {}
         }
 
         document.getElementById('adminToken').addEventListener('keypress', e => {
             if (e.key === 'Enter') login();
+        });
+
+        document.getElementById('productModal').addEventListener('click', e => {
+            if (e.target.id === 'productModal') closeProductModal();
         });
     </script>
 </body>

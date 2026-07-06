@@ -42,10 +42,51 @@ const memoryStore = {
         city: 'Milano'
     },
     social: { facebook: '', instagram: '', twitter: '', linkedin: '', whatsapp: '' },
-    csrfTokens: new Set(),
-    botIps: new Set(),
-    requestTimestamps: new Map()
+    csrfTokens: new Map(),
+    botIps: new Map(),
+    requestTimestamps: new Map(),
+    failedAuthAttempts: new Map(),
+    challenges: new Map()
 };
+
+const MAX_BOT_IPS = 1000;
+const MAX_STORED_TIMESTAMPS = 100;
+const MAX_FAILED_AUTH = 5;
+const BOT_BLOCK_DURATION = 3600000;
+const CHALLENGE_EXPIRY = 300000;
+
+setInterval(() => {
+    const now = Date.now();
+    
+    if (memoryStore.botIps.size > MAX_BOT_IPS) {
+        const entries = Array.from(memoryStore.botIps.entries());
+        memoryStore.botIps = new Map(entries.slice(-MAX_BOT_IPS));
+    }
+    
+    for (const [ip, timestamp] of memoryStore.botIps.entries()) {
+        if (now - timestamp > BOT_BLOCK_DURATION) {
+            memoryStore.botIps.delete(ip);
+        }
+    }
+    
+    for (const [token, data] of memoryStore.csrfTokens.entries()) {
+        if (now - data.created > 3600000) {
+            memoryStore.csrfTokens.delete(token);
+        }
+    }
+    
+    for (const [challenge, data] of memoryStore.challenges.entries()) {
+        if (now - data.created > CHALLENGE_EXPIRY) {
+            memoryStore.challenges.delete(challenge);
+        }
+    }
+    
+    for (const [ip, attempts] of memoryStore.failedAuthAttempts.entries()) {
+        if (attempts.timestamp && now - attempts.timestamp > 3600000) {
+            memoryStore.failedAuthAttempts.delete(ip);
+        }
+    }
+}, 300000);
 
 function sanitize(str, maxLength = 1000) {
     if (typeof str !== 'string') return '';
@@ -71,38 +112,114 @@ function isValidId(id) {
 
 function generateCSRFToken() {
     const token = crypto.randomBytes(32).toString('hex');
-    memoryStore.csrfTokens.add(token);
-    setTimeout(() => memoryStore.csrfTokens.delete(token), 3600000);
+    memoryStore.csrfTokens.set(token, { created: Date.now(), used: false });
     return token;
 }
 
 function validateCSRFToken(token) {
-    return memoryStore.csrfTokens.has(token);
+    const data = memoryStore.csrfTokens.get(token);
+    if (!data) return false;
+    if (data.used) return false;
+    if (Date.now() - data.created > 3600000) {
+        memoryStore.csrfTokens.delete(token);
+        return false;
+    }
+    memoryStore.csrfTokens.set(token, { ...data, used: true });
+    return true;
+}
+
+function generateChallenge() {
+    const a = Math.floor(Math.random() * 20) + 1;
+    const b = Math.floor(Math.random() * 20) + 1;
+    const challengeId = crypto.randomBytes(16).toString('hex');
+    memoryStore.challenges.set(challengeId, { a, b, created: Date.now() });
+    return { challengeId, question: `${a} + ${b} = ?` };
+}
+
+function validateChallenge(challengeId, answer) {
+    const challenge = memoryStore.challenges.get(challengeId);
+    if (!challenge) return false;
+    if (Date.now() - challenge.created > CHALLENGE_EXPIRY) {
+        memoryStore.challenges.delete(challengeId);
+        return false;
+    }
+    const correct = parseInt(answer) === (challenge.a + challenge.b);
+    if (correct) memoryStore.challenges.delete(challengeId);
+    return correct;
 }
 
 function checkBotIndicators(req) {
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
     
-    if (memoryStore.botIps.has(ip)) return true;
+    if (memoryStore.botIps.has(ip)) {
+        const blockedAt = memoryStore.botIps.get(ip);
+        if (now - blockedAt < BOT_BLOCK_DURATION) {
+            return true;
+        }
+        memoryStore.botIps.delete(ip);
+    }
     
     const userAgent = req.get('User-Agent') || '';
-    const botPatterns = [/bot/i, /crawler/i, /spider/i, /scraper/i, /curl/i, /wget/i, /python/i, /node-fetch/i];
-    if (botPatterns.some(p => p.test(userAgent))) {
-        memoryStore.botIps.add(ip);
+    if (!userAgent || userAgent.length < 10) {
+        memoryStore.botIps.set(ip, now);
         return true;
     }
     
-    const now = Date.now();
+    const botPatterns = [
+        /bot/i, /crawler/i, /spider/i, /scraper/i, /curl/i, /wget/i, 
+        /python/i, /node-fetch/i, /httpclient/i, /java\//i, /perl/i,
+        /nikto/i, /nmap/i, /sqlmap/i, /masscan/i, /zgrab/i
+    ];
+    if (botPatterns.some(p => p.test(userAgent))) {
+        memoryStore.botIps.set(ip, now);
+        return true;
+    }
+    
+    const acceptHeader = req.get('Accept') || '';
+    if (!acceptHeader.includes('text/html') && !acceptHeader.includes('application/json')) {
+        const timestamps = memoryStore.requestTimestamps.get(ip) || [];
+        if (timestamps.length > 5) {
+            memoryStore.botIps.set(ip, now);
+            return true;
+        }
+    }
+    
     const timestamps = memoryStore.requestTimestamps.get(ip) || [];
     const recentRequests = timestamps.filter(t => now - t < 60000);
+    
     if (recentRequests.length > 30) {
-        memoryStore.botIps.add(ip);
+        memoryStore.botIps.set(ip, now);
         return true;
     }
+    
+    const veryRecent = recentRequests.filter(t => now - t < 1000);
+    if (veryRecent.length > 5) {
+        memoryStore.botIps.set(ip, now);
+        return true;
+    }
+    
     recentRequests.push(now);
-    memoryStore.requestTimestamps.set(ip, recentRequests.slice(-50));
+    memoryStore.requestTimestamps.set(ip, recentRequests.slice(-MAX_STORED_TIMESTAMPS));
     
     return false;
+}
+
+function recordFailedAuth(ip) {
+    const attempts = memoryStore.failedAuthAttempts.get(ip) || { count: 0, timestamp: Date.now() };
+    attempts.count++;
+    attempts.timestamp = Date.now();
+    memoryStore.failedAuthAttempts.set(ip, attempts);
+    
+    if (attempts.count >= MAX_FAILED_AUTH) {
+        memoryStore.botIps.set(ip, Date.now());
+        return true;
+    }
+    return false;
+}
+
+function clearFailedAuth(ip) {
+    memoryStore.failedAuthAttempts.delete(ip);
 }
 
 app.use(helmet({
@@ -398,7 +515,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.post('/api/contact', contactLimiter, async (req, res) => {
-    const { name, email, subject, message, website, csrf_token } = req.body;
+    const { name, email, subject, message, website, csrf_token, challenge_id, challenge_answer } = req.body;
     
     if (website) {
         return res.status(200).json({ success: true });
@@ -406,6 +523,12 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
     
     if (!csrf_token || !validateCSRFToken(csrf_token)) {
         return res.status(403).json({ error: 'Token di sicurezza non valido' });
+    }
+    
+    if (challenge_id && challenge_answer !== undefined) {
+        if (!validateChallenge(challenge_id, challenge_answer)) {
+            return res.status(400).json({ error: 'Verifica anti-bot errata' });
+        }
     }
     
     const sanitizedName = sanitize(name, 100);
@@ -479,14 +602,29 @@ app.post('/api/newsletter', newsletterLimiter, async (req, res) => {
 });
 
 function authAdmin(req, res, next) {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const token = req.headers['x-admin-token'] || req.query.token;
     
     if (!token || token !== ADMIN_TOKEN) {
-        return res.status(401).json({ error: 'Non autorizzato' });
+        const blocked = recordFailedAuth(ip);
+        return res.status(401).json({ error: blocked ? 'IP bloccato per troppi tentativi' : 'Non autorizzato' });
     }
     
+    clearFailedAuth(ip);
     next();
 }
+
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+app.get('/api/challenge', (req, res) => {
+    const { challengeId, question } = generateChallenge();
+    res.json({ challengeId, question });
+});
 
 app.get('/api/admin/stats', authAdmin, async (req, res) => {
     try {
@@ -575,6 +713,243 @@ app.post('/api/admin/countdown/reset', authAdmin, async (req, res) => {
     }
     
     res.json({ success: true, endTime });
+});
+
+app.get('/api/admin/newsletter', authAdmin, adminLimiter, async (req, res) => {
+    try {
+        if (isConnected()) {
+            const result = await query('SELECT id, email, created_at FROM newsletter ORDER BY created_at DESC');
+            return res.json(result.rows.map(n => ({
+                id: n.id,
+                email: escapeHtml(n.email),
+                date: n.created_at
+            })));
+        }
+        res.json(memoryStore.newsletter.map((email, i) => ({
+            id: i + 1,
+            email: escapeHtml(email),
+            date: null
+        })));
+    } catch (err) {
+        console.error('Errore newsletter:', err);
+        res.json([]);
+    }
+});
+
+app.delete('/api/admin/newsletter/:id', authAdmin, adminLimiter, async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: 'ID non valido' });
+    }
+    
+    try {
+        if (isConnected()) {
+            await query('DELETE FROM newsletter WHERE id = $1', [id]);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Errore:', err);
+        res.status(500).json({ error: 'Errore' });
+    }
+});
+
+app.post('/api/admin/products', authAdmin, adminLimiter, async (req, res) => {
+    const { id, nome, autore, prezzo, prezzoVecchio, immagine, descrizione, inStock, checkoutUrl } = req.body;
+    
+    if (!id || !isValidId(id)) {
+        return res.status(400).json({ error: 'ID prodotto non valido' });
+    }
+    if (!nome || typeof nome !== 'string' || nome.length < 2 || nome.length > 255) {
+        return res.status(400).json({ error: 'Nome non valido' });
+    }
+    if (typeof prezzo !== 'number' || prezzo < 0 || prezzo > 99999) {
+        return res.status(400).json({ error: 'Prezzo non valido' });
+    }
+    
+    try {
+        if (isConnected()) {
+            const existing = await query('SELECT id FROM products WHERE id = $1', [id]);
+            if (existing.rows.length > 0) {
+                return res.status(400).json({ error: 'Prodotto gia esistente' });
+            }
+            
+            await query(
+                'INSERT INTO products (id, nome, autore, prezzo, prezzo_vecchio, immagine, descrizione, in_stock, checkout_url) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+                [id, nome, autore || '', prezzo, prezzoVecchio || null, immagine || '', descrizione || '', inStock !== false, checkoutUrl || '']
+            );
+        } else {
+            if (memoryStore.products.find(p => p.id === id)) {
+                return res.status(400).json({ error: 'Prodotto gia esistente' });
+            }
+            memoryStore.products.push({
+                id, nome, autore: autore || '', prezzo, prezzoVecchio: prezzoVecchio || null,
+                immagine: immagine || '', descrizione: descrizione || '', inStock: inStock !== false, checkoutUrl: checkoutUrl || ''
+            });
+        }
+        
+        res.json({ success: true, product: { id, nome, prezzo } });
+    } catch (err) {
+        console.error('Errore creazione prodotto:', err);
+        res.status(500).json({ error: 'Errore server' });
+    }
+});
+
+app.put('/api/admin/products/:id', authAdmin, adminLimiter, async (req, res) => {
+    const productId = req.params.id;
+    
+    if (!isValidId(productId)) {
+        return res.status(400).json({ error: 'ID non valido' });
+    }
+    
+    const { nome, autore, prezzo, prezzoVecchio, immagine, descrizione, inStock, checkoutUrl } = req.body;
+    
+    if (nome !== undefined && (typeof nome !== 'string' || nome.length < 2 || nome.length > 255)) {
+        return res.status(400).json({ error: 'Nome non valido' });
+    }
+    if (prezzo !== undefined && (typeof prezzo !== 'number' || prezzo < 0 || prezzo > 99999)) {
+        return res.status(400).json({ error: 'Prezzo non valido' });
+    }
+    
+    try {
+        if (isConnected()) {
+            const existing = await query('SELECT id FROM products WHERE id = $1', [productId]);
+            if (existing.rows.length === 0) {
+                return res.status(404).json({ error: 'Prodotto non trovato' });
+            }
+            
+            const updates = [];
+            const values = [];
+            let paramCount = 1;
+            
+            if (nome !== undefined) { updates.push(`nome = $${paramCount++}`); values.push(nome); }
+            if (autore !== undefined) { updates.push(`autore = $${paramCount++}`); values.push(autore || ''); }
+            if (prezzo !== undefined) { updates.push(`prezzo = $${paramCount++}`); values.push(prezzo); }
+            if (prezzoVecchio !== undefined) { updates.push(`prezzo_vecchio = $${paramCount++}`); values.push(prezzoVecchio || null); }
+            if (immagine !== undefined) { updates.push(`immagine = $${paramCount++}`); values.push(immagine || ''); }
+            if (descrizione !== undefined) { updates.push(`descrizione = $${paramCount++}`); values.push(descrizione || ''); }
+            if (inStock !== undefined) { updates.push(`in_stock = $${paramCount++}`); values.push(inStock !== false); }
+            if (checkoutUrl !== undefined) { updates.push(`checkout_url = $${paramCount++}`); values.push(checkoutUrl || ''); }
+            
+            if (updates.length > 0) {
+                values.push(productId);
+                await query(`UPDATE products SET ${updates.join(', ')} WHERE id = $${paramCount}`, values);
+            }
+        } else {
+            const product = memoryStore.products.find(p => p.id === productId);
+            if (!product) {
+                return res.status(404).json({ error: 'Prodotto non trovato' });
+            }
+            
+            if (nome !== undefined) product.nome = nome;
+            if (autore !== undefined) product.autore = autore || '';
+            if (prezzo !== undefined) product.prezzo = prezzo;
+            if (prezzoVecchio !== undefined) product.prezzoVecchio = prezzoVecchio;
+            if (immagine !== undefined) product.immagine = immagine || '';
+            if (descrizione !== undefined) product.descrizione = descrizione || '';
+            if (inStock !== undefined) product.inStock = inStock !== false;
+            if (checkoutUrl !== undefined) product.checkoutUrl = checkoutUrl || '';
+        }
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Errore aggiornamento prodotto:', err);
+        res.status(500).json({ error: 'Errore server' });
+    }
+});
+
+app.delete('/api/admin/products/:id', authAdmin, adminLimiter, async (req, res) => {
+    const productId = req.params.id;
+    
+    if (!isValidId(productId)) {
+        return res.status(400).json({ error: 'ID non valido' });
+    }
+    
+    try {
+        if (isConnected()) {
+            await query('DELETE FROM products WHERE id = $1', [productId]);
+        } else {
+            memoryStore.products = memoryStore.products.filter(p => p.id !== productId);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Errore eliminazione prodotto:', err);
+        res.status(500).json({ error: 'Errore server' });
+    }
+});
+
+app.put('/api/admin/settings', authAdmin, adminLimiter, async (req, res) => {
+    const allowedKeys = ['site_name', 'email', 'phone', 'city', 'free_shipping_above', 'shipping_cost',
+        'social_facebook', 'social_instagram', 'social_twitter', 'social_linkedin', 'social_whatsapp'];
+    
+    const updates = {};
+    
+    for (const [key, value] of Object.entries(req.body)) {
+        if (!allowedKeys.includes(key)) continue;
+        
+        if (key === 'free_shipping_above' || key === 'shipping_cost') {
+            const numValue = parseFloat(value);
+            if (isNaN(numValue) || numValue < 0 || numValue > 99999) continue;
+            updates[key] = numValue;
+        } else if (typeof value === 'string' && value.length <= 500) {
+            updates[key] = value;
+        }
+    }
+    
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'Nessun dato valido' });
+    }
+    
+    try {
+        if (isConnected()) {
+            for (const [key, value] of Object.entries(updates)) {
+                await query(
+                    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
+                    [key, String(value)]
+                );
+            }
+        } else {
+            for (const [key, value] of Object.entries(updates)) {
+                if (key.startsWith('social_')) {
+                    memoryStore.social[key.replace('social_', '')] = value;
+                } else if (key === 'site_name') memoryStore.settings.siteName = value;
+                else if (key === 'email') memoryStore.settings.email = value;
+                else if (key === 'phone') memoryStore.settings.phone = value;
+                else if (key === 'city') memoryStore.settings.city = value;
+            }
+        }
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Errore aggiornamento settings:', err);
+        res.status(500).json({ error: 'Errore server' });
+    }
+});
+
+app.get('/api/admin/settings', authAdmin, adminLimiter, async (req, res) => {
+    try {
+        if (isConnected()) {
+            const result = await query('SELECT key, value FROM settings');
+            const settings = {};
+            result.rows.forEach(row => {
+                settings[row.key] = row.value;
+            });
+            return res.json(settings);
+        }
+        res.json({
+            site_name: memoryStore.settings.siteName,
+            email: memoryStore.settings.email,
+            phone: memoryStore.settings.phone,
+            city: memoryStore.settings.city,
+            social_facebook: memoryStore.social.facebook,
+            social_instagram: memoryStore.social.instagram,
+            social_twitter: memoryStore.social.twitter,
+            social_linkedin: memoryStore.social.linkedin,
+            social_whatsapp: memoryStore.social.whatsapp
+        });
+    } catch (err) {
+        console.error('Errore get settings:', err);
+        res.status(500).json({ error: 'Errore server' });
+    }
 });
 
 app.get('*', (req, res) => {

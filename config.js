@@ -61,6 +61,11 @@ const API = {
         return res.json();
     },
     
+    async getChallenge() {
+        const res = await fetch('/api/challenge');
+        return res.json();
+    },
+    
     async sendContact(data) {
         const res = await fetch('/api/contact', {
             method: 'POST',
