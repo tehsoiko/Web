@@ -1,27 +1,51 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+let pool = null;
+let dbConnected = false;
+
+async function initPool() {
+    if (!process.env.DATABASE_URL) {
+        console.log('DATABASE_URL non impostato - uso memoria locale');
+        return false;
+    }
+    
+    try {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+        
+        await pool.query('SELECT NOW()');
+        console.log('Connesso al database PostgreSQL');
+        return true;
+    } catch (err) {
+        console.error('Errore connessione database:', err.message);
+        return false;
+    }
+}
 
 async function query(text, params) {
-    const start = Date.now();
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    console.log('Query', { text: text.substring(0, 50), duration, rows: res.rowCount });
-    return res;
+    if (!pool) {
+        throw new Error('Database non connesso');
+    }
+    return pool.query(text, params);
 }
 
 async function initDatabase() {
+    dbConnected = await initPool();
+    
+    if (!dbConnected) {
+        console.log('Uso fallback in memoria');
+        return;
+    }
+    
     try {
         await query(`
             CREATE TABLE IF NOT EXISTS views (
                 id SERIAL PRIMARY KEY,
                 session_id VARCHAR(255) NOT NULL,
                 view_date DATE NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                CONSTRAINT unique_session_date UNIQUE(session_id, view_date)
+                created_at TIMESTAMP DEFAULT NOW()
             )
         `);
         
@@ -129,8 +153,12 @@ async function initDatabase() {
         
         console.log('Database inizializzato correttamente');
     } catch (err) {
-        console.error('Errore inizializzazione database:', err);
+        console.error('Errore inizializzazione database:', err.message);
     }
 }
 
-module.exports = { query, pool, initDatabase };
+function isConnected() {
+    return dbConnected;
+}
+
+module.exports = { query, initDatabase, isConnected };
