@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Admin | Libri d'Impresa</title>
+    <link rel="stylesheet" href="Stili.css">
+    <style>
+        .admin-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .admin-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; padding: 30px; border-radius: var(--radius); margin-bottom: 30px; }
+        .admin-header h1 { margin-bottom: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--card); padding: 24px; border-radius: var(--radius); text-align: center; box-shadow: 0 3px 15px var(--shadow); }
+        .stat-card .stat-value { font-size: 2.5em; font-weight: 700; color: var(--primary-dark); }
+        .stat-card .stat-label { font-size: 0.9em; color: var(--muted); margin-top: 8px; }
+        .admin-section { background: var(--card); padding: 24px; border-radius: var(--radius); margin-bottom: 20px; box-shadow: 0 3px 15px var(--shadow); }
+        .admin-section h2 { margin-bottom: 20px; font-size: 1.3em; }
+        .contact-item { padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.08); }
+        .contact-item.unread { background: rgba(220, 194, 102, 0.1); }
+        .contact-item .contact-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .contact-item .contact-name { font-weight: 600; }
+        .contact-item .contact-date { font-size: 0.85em; color: var(--muted); }
+        .contact-item .contact-email { font-size: 0.85em; color: var(--muted); }
+        .contact-item .contact-message { margin-top: 8px; color: var(--text); }
+        .btn-small { padding: 8px 16px; font-size: 0.85em; }
+        .product-list { display: grid; gap: 12px; }
+        .product-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(0,0,0,0.02); border-radius: 8px; }
+        .product-item .product-info { display: flex; align-items: center; gap: 16px; }
+        .product-item img { width: 50px; height: 65px; object-fit: cover; border-radius: 4px; }
+        .product-item .product-name { font-weight: 600; }
+        .product-item .product-price { color: var(--success); font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Libri d'Impresa
+            </a>
+            <ul class="navbar-nav">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="catalogo.html">Catalogo</a></li>
+                <li><a href="admin.html" class="active">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Pannello Admin</h1>
+            <p>Gestisci il tuo sito</p>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="statViews">-</div>
+                <div class="stat-label">Visite totali</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statContacts">-</div>
+                <div class="stat-label">Messaggi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statUnread">-</div>
+                <div class="stat-label">Non letti</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statNewsletter">-</div>
+                <div class="stat-label">Iscritti newsletter</div>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h2>Prodotti</h2>
+            <div class="product-list" id="productList"></div>
+        </div>
+
+        <div class="admin-section">
+            <h2>Messaggi ricevuti</h2>
+            <div id="contactList"></div>
+        </div>
+
+        <div class="admin-section">
+            <h2>Azioni</h2>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <button class="btn" onclick="resetCountdown()">Reset countdown</button>
+                <button class="btn btn-outline" onclick="exportData()">Esporta dati</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/admin/stats');
+                const data = await res.json();
+                document.getElementById('statViews').textContent = data.views.toLocaleString('it-IT');
+                document.getElementById('statContacts').textContent = data.contacts;
+                document.getElementById('statUnread').textContent = data.unreadContacts;
+                document.getElementById('statNewsletter').textContent = data.newsletterSubscribers;
+            } catch (e) {
+                console.error('Errore caricamento statistiche:', e);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const res = await fetch('/api/products');
+                const products = await res.json();
+                const list = document.getElementById('productList');
+                list.innerHTML = products.map(p => `
+                    <div class="product-item">
+                        <div class="product-info">
+                            ${p.immagine ? `<img src="${p.immagine}" alt="${p.nome}">` : '<div style="width:50px;height:65px;background:var(--primary);border-radius:4px;"></div>'}
+                            <div>
+                                <div class="product-name">${p.nome}</div>
+                                <div style="font-size:0.85em;color:var(--muted)">${p.autore || p.descrizione}</div>
+                            </div>
+                        </div>
+                        <div class="product-price">EUR ${p.prezzo.toFixed(2).replace('.',',')}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Errore caricamento prodotti:', e);
+            }
+        }
+
+        async function loadContacts() {
+            try {
+                const res = await fetch('/api/admin/contacts');
+                const contacts = await res.json();
+                const list = document.getElementById('contactList');
+                
+                if (contacts.length === 0) {
+                    list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">Nessun messaggio</p>';
+                    return;
+                }
+                
+                list.innerHTML = contacts.map(c => `
+                    <div class="contact-item ${c.read ? '' : 'unread'}">
+                        <div class="contact-header">
+                            <div>
+                                <span class="contact-name">${c.name}</span>
+                                <span class="contact-email">&lt;${c.email}&gt;</span>
+                            </div>
+                            <span class="contact-date">${new Date(c.date).toLocaleString('it-IT')}</span>
+                        </div>
+                        <div style="font-size:0.9em;color:var(--muted)">${c.subject}</div>
+                        <div class="contact-message">${c.message}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Errore caricamento contatti:', e);
+            }
+        }
+
+        async function resetCountdown() {
+            try {
+                const res = await fetch('/api/countdown/reset', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Countdown resettato!');
+                }
+            } catch (e) {
+                console.error('Errore reset countdown:', e);
+            }
+        }
+
+        async function exportData() {
+            try {
+                const [products, contacts, stats] = await Promise.all([
+                    fetch('/api/products').then(r => r.json()),
+                    fetch('/api/admin/contacts').then(r => r.json()),
+                    fetch('/api/admin/stats').then(r => r.json())
+                ]);
+                
+                const data = { products, contacts, stats, exportDate: new Date().toISOString() };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `libri-dimpresa-export-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+            } catch (e) {
+                console.error('Errore esportazione:', e);
+            }
+        }
+
+        loadStats();
+        loadProducts();
+        loadContacts();
+    </script>
+</body>
+</html>

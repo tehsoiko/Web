@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contatta Libri d'Impresa. Scrivici per informazioni, ordini, collaborazioni. Siamo a Milano.">
+    <meta name="keywords" content="contatti libri d'impresa, informazioni editoriali, collaborazioni editoriali">
+    <meta property="og:title" content="Contatti | Libri d'Impresa">
+    <meta property="og:description" content="Contattaci per informazioni, ordini e collaborazioni. Siamo a Milano.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="it_IT">
+    <link rel="canonical" href="contatti.html">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dcc266'><path d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20v-2H6.5a.5.5 0 0 1 0-1H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z'/></svg>">
+    <title>Contatti | Libri d'Impresa</title>
+    <link rel="stylesheet" href="Stili.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Libri d'Impresa
+            </a>
+            <ul class="navbar-nav">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="chi-siamo.html">Chi siamo</a></li>
+                <li><a href="catalogo.html">Catalogo</a></li>
+                <li><a href="contatti.html" class="active">Contatti</a></li>
+            </ul>
+            <div class="theme-toggle">
+                <button class="theme-btn" data-theme="alba" title="Tema Alba" aria-label="Attiva tema Alba"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 18a5 5 0 0 0-10 0" stroke-width="2" fill="none" stroke="currentColor"/><line x1="12" y1="2" x2="12" y2="6" stroke-width="2.5" stroke="currentColor"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64" stroke-width="2" stroke="currentColor"/><line x1="1" y1="18" x2="5" y2="18" stroke-width="2" stroke="currentColor"/><line x1="17.36" y1="11.64" x2="18.78" y2="10.22" stroke-width="2" stroke="currentColor"/><line x1="23" y1="18" x2="19" y2="18" stroke-width="2" stroke="currentColor"/></svg></button>
+                <button class="theme-btn active" data-theme="normale" title="Tema Normale" aria-label="Attiva tema Normale"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke-width="2" fill="none" stroke="currentColor"/><line x1="12" y1="1" x2="12" y2="4" stroke-width="2" stroke="currentColor"/><line x1="12" y1="20" x2="12" y2="23" stroke-width="2" stroke="currentColor"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34" stroke-width="2" stroke="currentColor"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78" stroke-width="2" stroke="currentColor"/><line x1="1" y1="12" x2="4" y2="12" stroke-width="2" stroke="currentColor"/><line x1="20" y1="12" x2="23" y2="12" stroke-width="2" stroke="currentColor"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66" stroke-width="2" stroke="currentColor"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22" stroke-width="2" stroke="currentColor"/></svg></button>
+                <button class="theme-btn" data-theme="fuoco" title="Tema Fuoco" aria-label="Attiva tema Fuoco"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c0 4-3 6-3 10a5 5 0 0 0 10 0c0-4-3-6-3-10-1.5 2-2.5 3-4 3z" stroke-width="2" fill="none" stroke="currentColor"/><path d="M12 12c0 2 1 3 1 4a2 2 0 0 1-4 0c0-1 1-2 1-4" stroke-width="2" fill="none" stroke="currentColor"/></svg></button>
+            </div>
+            <a href="carrello.html" class="navbar-brand cart-badge" id="cartBadge" aria-label="Vai al carrello">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            </a>
+        </div>
+    </nav>
+    
+    <div class="progress"></div>
+    
+    <div class="page-header">
+        <h1>Contatti</h1>
+        <p>Come raggiungerci</p>
+    </div>
+    
+    <main class="main">
+        <div class="breadcrumb"><a href="index.html">Home</a> / <span>Contatti</span></div>
+        
+        <div class="card contact-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+            <div>
+                <h2 style="margin-bottom:20px;font-size:1.3em;">Scrivici</h2>
+                <form id="contactForm" class="contact-form">
+                    <!-- HONEYPOT - Anti-bot: campo nascosto -->
+                    <input type="text" name="website" class="honeypot" tabindex="-1" autocomplete="off">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" name="name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Oggetto</label>
+                        <select name="subject" class="form-input">
+                            <option>Informazioni generali</option>
+                            <option>Ordini e spedizioni</option>
+                            <option>Resi</option>
+                            <option>Collaborazioni</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Messaggio *</label>
+                        <textarea name="message" class="form-input" required></textarea>
+                    </div>
+                    <!-- Anti-bot: verifica tempo -->
+                    <input type="hidden" name="timestamp" value="">
+                    <p style="font-size:0.8em;color:var(--muted);margin-bottom:12px;">* campi obbligatori</p>
+                    <button type="submit" class="btn">Invia messaggio</button>
+                    <p id="formStatus" style="margin-top:12px;font-size:0.9em;"></p>
+                </form>
+            </div>
+            
+            <div>
+                <h2 style="margin-bottom:20px;font-size:1.3em;">Dove siamo</h2>
+                <p style="margin-bottom:20px;line-height:1.7;">Via Roma 123<br>20100 Milano</p>
+                
+                <h3 style="margin-bottom:8px;font-size:1em;">Email</h3>
+                <p style="margin-bottom:16px;" id="cEmail">info@libridimpresa.it<br>supporto@libridimpresa.it</p>
+                
+                <h3 style="margin-bottom:8px;font-size:1em;">Telefono</h3>
+                <p style="margin-bottom:16px;" id="cPhone">+39 02 1234567</p>
+                
+                <h3 style="margin-bottom:8px;font-size:1em;">Orari</h3>
+                <p style="margin-bottom:20px;">Lun-Ven: 9-18<br>Sab: 9-13</p>
+                
+                <h3 style="margin-bottom:12px;font-size:1em;">Social</h3>
+                <div class="social-links" id="socialLinks">
+                    <a href="#" class="social-btn" data-social="facebook" aria-label="Seguici su Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+                    <a href="#" class="social-btn" data-social="instagram" aria-label="Seguici su Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+                    <a href="#" class="social-btn" data-social="twitter" aria-label="Seguici su Twitter/X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+                    <a href="#" class="social-btn" data-social="linkedin" aria-label="Seguici su LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+                    <a href="#" class="social-btn" data-social="whatsapp" aria-label="Contattaci su WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="footer">
+        <div class="footer-inner">
+            <div><h4>Libri d'Impresa</h4><p>Casa editrice indipendente dal 2004.</p></div>
+            <div><h4>Link</h4><a href="chi-siamo.html">Chi siamo</a><a href="catalogo.html">Catalogo</a><a href="#">Collabora</a></div>
+            <div><h4>Assistenza</h4><a href="contatti.html">Contatti</a><a href="#">Spedizioni</a><a href="#">Resi</a></div>
+            <div><h4>Contatti</h4>                <div class="footer-contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>info@libridimpresa.it</span></div></div>
+        </div>
+        <div class="footer-bottom">&copy; 2026 Libri d'Impresa | <a href="#">Privacy</a> | <a href="#">Termini</a></div>
+    </footer>
+    
+    <button class="to-top" id="toTop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+    
+    <script src="config.js"></script>
+    <script src="cart.js"></script>
+    <script src="common.js"></script>
+    <script>
+        const form = document.getElementById('contactForm');
+        const status = document.getElementById('formStatus');
+        const timestamp = form.querySelector('[name="timestamp"]');
+        timestamp.value = Date.now();
+        
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            
+            const honeypot = form.querySelector('[name="website"]').value;
+            if (honeypot) { console.log('Bot detected'); return; }
+            
+            const timeDiff = Date.now() - parseInt(timestamp.value);
+            if (timeDiff < 2000) { 
+                status.style.color = 'var(--danger)'; 
+                status.textContent = 'Per favore compila il form piu lentamente.'; 
+                return; 
+            }
+            
+            const data = {
+                name: form.name.value,
+                email: form.email.value,
+                subject: form.subject.value,
+                message: form.message.value
+            };
+            
+            status.style.color = 'var(--muted)';
+            status.textContent = 'Invio in corso...';
+            
+            try {
+                const res = await API.sendContact(data);
+                if (res.success) {
+                    status.style.color = 'var(--success)';
+                    status.textContent = res.message || 'Messaggio inviato con successo!';
+                    form.reset();
+                    timestamp.value = Date.now();
+                } else {
+                    throw new Error(res.error);
+                }
+            } catch (err) {
+                status.style.color = 'var(--danger)';
+                status.textContent = 'Errore. Riprova o scrivi a info@libridimpresa.it';
+            }
+        });
+    </script>
+</body>
+</html>
