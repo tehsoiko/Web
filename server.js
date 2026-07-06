@@ -79,32 +79,42 @@ app.get('/api/views', async (req, res) => {
         
         if (isConnected()) {
             try {
+                // Registra la visita di oggi
                 await query(
                     'INSERT INTO views (session_id, view_date) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                     [req.sessionId, today]
                 );
                 
+                // Aggiorna o crea sessione attiva
                 await query(
-                    'INSERT INTO active_sessions (session_id, last_activity) VALUES ($1, NOW()) ON CONFLICT (session_id) DO UPDATE SET last_activity = NOW()',
+                    `INSERT INTO active_sessions (session_id, last_activity) VALUES ($1, NOW()) 
+                     ON CONFLICT (session_id) DO UPDATE SET last_activity = NOW()`,
                     [req.sessionId]
                 );
                 
+                // Rimuovi sessioni scadute (più di 5 minuti)
                 await query(
-                    'DELETE FROM active_sessions WHERE last_activity < NOW() - INTERVAL \'5 minutes\''
+                    `DELETE FROM active_sessions WHERE last_activity < NOW() - INTERVAL '5 minutes'`
                 );
                 
-                const totalResult = await query('SELECT COUNT(*) as total FROM views');
+                // Conta visitatori totali (sessioni uniche)
+                const totalResult = await query('SELECT COUNT(DISTINCT session_id) as total FROM views');
+                
+                // Conta utenti online
                 const onlineResult = await query('SELECT COUNT(*) as online FROM active_sessions');
                 
-                return res.json({
-                    total: parseInt(totalResult.rows[0].total) || 0,
-                    online: parseInt(onlineResult.rows[0].online) || 0
-                });
+                const total = parseInt(totalResult.rows[0]?.total) || 0;
+                const online = parseInt(onlineResult.rows[0]?.online) || 0;
+                
+                console.log(`Views API - Total: ${total}, Online: ${online}`);
+                
+                return res.json({ total, online });
             } catch (dbErr) {
                 console.error('DB error in views:', dbErr.message);
             }
         }
         
+        // Fallback memoria locale
         const viewKey = `${req.sessionId}_${today}`;
         if (!memoryStore.views.includes(viewKey)) {
             memoryStore.views.push(viewKey);
@@ -112,16 +122,19 @@ app.get('/api/views', async (req, res) => {
         
         memoryStore.activeSessions[req.sessionId] = now;
         
+        // Rimuovi sessioni inattive da più di 5 minuti
         Object.keys(memoryStore.activeSessions).forEach(sid => {
             if (now - memoryStore.activeSessions[sid] > 5 * 60 * 1000) {
                 delete memoryStore.activeSessions[sid];
             }
         });
         
-        res.json({
-            total: memoryStore.views.length,
-            online: Object.keys(memoryStore.activeSessions).length
-        });
+        const total = memoryStore.views.length;
+        const online = Object.keys(memoryStore.activeSessions).length;
+        
+        console.log(`Views API (memory) - Total: ${total}, Online: ${online}`);
+        
+        res.json({ total, online });
     } catch (err) {
         console.error('Errore views:', err);
         res.json({ total: 1, online: 1 });

@@ -197,24 +197,29 @@ const Cart = {
 
 // Contatore visite dal server
 const VisitCounter = {
+    interval: null,
+    
     async init() {
+        await this.update();
+        
+        // Aggiorna ogni 30 secondi per mantenere la sessione attiva
+        this.interval = setInterval(() => this.update(), 30000);
+    },
+    
+    async update() {
         try {
             const data = await API.getViews();
             const totalEl = document.getElementById('totalVisits');
             const onlineEl = document.getElementById('onlineNow');
             
-            if (totalEl && data.total) {
+            if (totalEl && data.total !== undefined) {
                 totalEl.textContent = data.total.toLocaleString('it-IT');
             }
-            if (onlineEl && data.online) {
+            if (onlineEl && data.online !== undefined) {
                 onlineEl.textContent = data.online;
             }
         } catch (e) {
             console.log('Contatore non disponibile');
-            const totalEl = document.getElementById('totalVisits');
-            const onlineEl = document.getElementById('onlineNow');
-            if (totalEl) totalEl.textContent = '-';
-            if (onlineEl) onlineEl.textContent = '-';
         }
     }
 };
