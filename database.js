@@ -31,9 +31,17 @@ async function initDatabase() {
         await query(`CREATE TABLE IF NOT EXISTS products (id VARCHAR(100) PRIMARY KEY, nome VARCHAR(255) NOT NULL, autore VARCHAR(255), prezzo DECIMAL(10,2) NOT NULL, prezzo_vecchio DECIMAL(10,2), immagine VARCHAR(500), descrizione TEXT, in_stock BOOLEAN DEFAULT true, checkout_url VARCHAR(500))`);
         
         const p = await query('SELECT COUNT(*) FROM products');
-        if (!parseInt(p.rows[0].count)) {
+        if (parseInt(p.rows[0].count) === 0) {
             await query('INSERT INTO products (id, nome, autore, prezzo, prezzo_vecchio, immagine, descrizione, in_stock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', ['interfacce', 'Interfacce', '', 19.99, 29.99, 'Livro-bestseller-blog-Divirta-c.webp', 'Un libro sulle tecnologie digitali', true]);
             await query('INSERT INTO products (id, nome, autore, prezzo, immagine, descrizione, in_stock) VALUES ($1,$2,$3,$4,$5,$6,$7)', ['all-avvenire', "All'avvenire", '', 0, '', 'Prossima pubblicazione', false]);
+        } else {
+            const validIds = ['interfacce', 'all-avvenire'];
+            const existing = await query('SELECT id FROM products');
+            for (const row of existing.rows) {
+                if (!validIds.includes(row.id)) {
+                    await query('DELETE FROM products WHERE id = $1', [row.id]);
+                }
+            }
         }
         
         await query(`CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(255) NOT NULL, subject VARCHAR(200), message TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW(), is_read BOOLEAN DEFAULT false)`);
