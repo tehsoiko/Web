@@ -30,17 +30,24 @@ async function initDatabase() {
         
         await query(`CREATE TABLE IF NOT EXISTS products (id VARCHAR(100) PRIMARY KEY, nome VARCHAR(255) NOT NULL, autore VARCHAR(255), prezzo DECIMAL(10,2) NOT NULL, prezzo_vecchio DECIMAL(10,2), immagine VARCHAR(500), descrizione TEXT, in_stock BOOLEAN DEFAULT true, checkout_url VARCHAR(500))`);
         
-        const p = await query('SELECT COUNT(*) FROM products');
-        if (parseInt(p.rows[0].count) === 0) {
-            await query('INSERT INTO products (id, nome, autore, prezzo, prezzo_vecchio, immagine, descrizione, in_stock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', ['interfacce', 'Interfacce', '', 19.99, 29.99, 'Livro-bestseller-blog-Divirta-c.webp', 'Un libro sulle tecnologie digitali', true]);
-            await query('INSERT INTO products (id, nome, autore, prezzo, immagine, descrizione, in_stock) VALUES ($1,$2,$3,$4,$5,$6,$7)', ['all-avvenire', "All'avvenire", '', 0, '', 'Prossima pubblicazione', false]);
-        } else {
-            const validIds = ['interfacce', 'all-avvenire'];
-            const existing = await query('SELECT id FROM products');
-            for (const row of existing.rows) {
-                if (!validIds.includes(row.id)) {
-                    await query('DELETE FROM products WHERE id = $1', [row.id]);
+        const defaultProducts = [
+            { id: 'interfacce', nome: 'Interfacce', autore: '', prezzo: 19.99, prezzoVecchio: 29.99, immagine: 'Livro-bestseller-blog-Divirta-c.webp', descrizione: 'Un libro sulle tecnologie digitali', inStock: true },
+            { id: 'all-avvenire', nome: "All'avvenire", autore: '', prezzo: 0, immagine: '', descrizione: 'Prossima pubblicazione', inStock: false }
+        ];
+        const existing = await query('SELECT id FROM products');
+        const existingIds = existing.rows.map(r => r.id);
+        for (const p of defaultProducts) {
+            if (!existingIds.includes(p.id)) {
+                if (p.inStock) {
+                    await query('INSERT INTO products (id, nome, autore, prezzo, prezzo_vecchio, immagine, descrizione, in_stock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [p.id, p.nome, p.autore, p.prezzo, p.prezzoVecchio, p.immagine, p.descrizione, p.inStock]);
+                } else {
+                    await query('INSERT INTO products (id, nome, autore, prezzo, immagine, descrizione, in_stock) VALUES ($1,$2,$3,$4,$5,$6,$7)', [p.id, p.nome, p.autore, p.prezzo, p.immagine, p.descrizione, p.inStock]);
                 }
+            }
+        }
+        for (const id of existingIds) {
+            if (!defaultProducts.map(p => p.id).includes(id)) {
+                await query('DELETE FROM products WHERE id = $1', [id]);
             }
         }
         
