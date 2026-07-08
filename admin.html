@@ -244,16 +244,11 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="common.js"></script>
     <script>
         let adminToken = '';
         let products = [];
-
-        function escapeHtml(str) {
-            if (typeof str !== 'string') return '';
-            return str.replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
 
         function login() {
             adminToken = document.getElementById('adminToken').value.trim();

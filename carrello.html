@@ -57,7 +57,8 @@
     <script src="cart.js"></script>
     <script src="common.js"></script>
     <script>
-        CONFIG.onReady(() => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CONFIG.load();
             Cart.render(document.getElementById('cartContainer'));
         });
     </script>
